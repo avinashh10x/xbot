@@ -2,8 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { signOut } from '@/app/actions/auth';
-import { LayoutDashboard, Settings, LogOut, Twitter } from 'lucide-react';
+import { LayoutDashboard, Settings, Twitter } from 'lucide-react';
 
 interface NavbarProps {
   twitterConnected?: boolean;
@@ -11,10 +10,6 @@ interface NavbarProps {
 
 export function Navbar({ twitterConnected }: NavbarProps) {
   const pathname = usePathname();
-
-  const handleSignOut = async () => {
-    await signOut();
-  };
 
   const navLinks = [
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -62,19 +57,11 @@ export function Navbar({ twitterConnected }: NavbarProps) {
             ) : (
               <Link
                 href="/api/auth/twitter"
-                className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
               >
                 Connect Twitter
               </Link>
             )}
-
-            <button
-              onClick={handleSignOut}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 border border-gray-300 rounded-md hover:bg-gray-50"
-            >
-              <LogOut className="w-4 h-4" />
-              Sign Out
-            </button>
           </div>
         </div>
       </div>
