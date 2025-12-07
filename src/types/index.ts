@@ -15,7 +15,7 @@ export interface TweetQueue {
   content: string;
   media_url?: string;
   scheduled_at: string;
-  status: 'pending' | 'posted' | 'failed';
+  status: "pending" | "posted" | "failed";
   posted_at?: string;
   retry_count: number;
   error_message?: string;
@@ -49,4 +49,28 @@ export interface UpdateTweetInput {
   content?: string;
   media_url?: string;
   scheduled_at?: string;
+}
+
+export interface TwitterTweet {
+  id: string;
+  text: string;
+  created_at: string;
+  public_metrics?: {
+    retweet_count: number;
+    reply_count: number;
+    like_count: number;
+    quote_count: number;
+  };
+}
+
+export interface PostingSettings {
+  id: string;
+  user_id: string;
+  auto_post_enabled: boolean;
+  post_interval_minutes: number;
+  max_posts_per_day: number;
+  posts_today: number;
+  last_post_at?: string;
+  created_at: string;
+  updated_at: string;
 }

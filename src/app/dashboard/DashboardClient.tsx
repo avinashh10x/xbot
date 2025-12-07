@@ -5,10 +5,20 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import { TweetQueueTable } from "@/components/TweetQueueTable";
 import { AddTweetModal } from "@/components/AddTweetModal";
+import { PostingController } from "@/components/PostingController";
+import { PostedTweetsList } from "@/components/PostedTweetsList";
 import { createTweet, deleteTweet } from "@/app/actions/tweets";
 import { TweetQueue } from "@/types";
 import { createClient } from "@/lib/supabase/client";
-import { Plus, AlertCircle, CheckCircle, Twitter, User, Hash, Calendar } from "lucide-react";
+import {
+  Plus,
+  AlertCircle,
+  CheckCircle,
+  Twitter,
+  User,
+  Hash,
+  Calendar,
+} from "lucide-react";
 
 interface DashboardClientProps {
   initialTweets: TweetQueue[];
@@ -263,7 +273,7 @@ export function DashboardClient({
                 </span>
               </div>
             </div>
-            
+
             {/* Stats */}
             <div className="mt-6 pt-6 border-t border-gray-200">
               <div className="grid grid-cols-3 gap-4">
@@ -277,19 +287,15 @@ export function DashboardClient({
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-gray-900">
-                    {tweets.filter(t => t.status === 'posted').length}
+                    {tweets.filter((t) => t.status === "posted").length}
                   </div>
-                  <div className="text-sm text-gray-600 mt-1">
-                    Posted
-                  </div>
+                  <div className="text-sm text-gray-600 mt-1">Posted</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-gray-900">
-                    {tweets.filter(t => t.status === 'pending').length}
+                    {tweets.filter((t) => t.status === "pending").length}
                   </div>
-                  <div className="text-sm text-gray-600 mt-1">
-                    Pending
-                  </div>
+                  <div className="text-sm text-gray-600 mt-1">Pending</div>
                 </div>
               </div>
             </div>
@@ -299,7 +305,7 @@ export function DashboardClient({
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Tweet Queue</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
             <p className="text-gray-600 mt-1">
               Manage and schedule your tweets
             </p>
@@ -315,8 +321,26 @@ export function DashboardClient({
           </button>
         </div>
 
-        {/* Tweet Queue Table */}
-        <TweetQueueTable tweets={tweets} onDelete={handleDeleteTweet} />
+        {/* Two Column Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+          {/* Posting Controller */}
+          <div className="lg:col-span-1">
+            <PostingController />
+          </div>
+
+          {/* Posted Tweets List */}
+          <div className="lg:col-span-2">
+            {twitterConnected && <PostedTweetsList />}
+          </div>
+        </div>
+
+        {/* Scheduled Tweets Section */}
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            Scheduled Tweets
+          </h2>
+          <TweetQueueTable tweets={tweets} onDelete={handleDeleteTweet} />
+        </div>
       </div>
 
       {/* Add Tweet Modal */}

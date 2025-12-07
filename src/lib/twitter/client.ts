@@ -90,6 +90,25 @@ export async function postTweet(
   }
 }
 
+export async function getUserTweets(
+  accessToken: string,
+  userId: string,
+  maxResults: number = 10
+) {
+  try {
+    const client = new TwitterApi(accessToken);
+    const tweets = await client.v2.userTimeline(userId, {
+      max_results: maxResults,
+      "tweet.fields": ["created_at", "public_metrics"],
+    });
+
+    return tweets.data.data || [];
+  } catch (error: any) {
+    console.error("Failed to fetch user tweets:", error);
+    throw new Error(error?.message || "Failed to fetch tweets");
+  }
+}
+
 export function generateOAuthUrl(state: string) {
   console.log("📋 Generating OAuth URL with configuration:");
   console.log(
