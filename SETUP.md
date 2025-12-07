@@ -47,7 +47,7 @@
      - **App info**:
        - Callback URI / Redirect URL: `http://localhost:3000/api/auth/twitter/callback`
        - Website URL: `http://localhost:3000`
-   - Click "Save"
+   - Click "Save" 
 
 6. **Get OAuth 2.0 Credentials**:
    - After saving, you'll see your OAuth 2.0 credentials
