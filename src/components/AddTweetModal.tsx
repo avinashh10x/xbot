@@ -1,36 +1,44 @@
-'use client';
+"use client";
 
-import { useState, FormEvent } from 'react';
-import { X } from 'lucide-react';
+import { useState, FormEvent } from "react";
+import { X } from "lucide-react";
 
 interface AddTweetModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (content: string, scheduledAt: string, mediaUrl?: string) => Promise<void>;
+  onSubmit: (
+    content: string,
+    scheduledAt: string,
+    mediaUrl?: string
+  ) => Promise<void>;
 }
 
-export function AddTweetModal({ isOpen, onClose, onSubmit }: AddTweetModalProps) {
-  const [content, setContent] = useState('');
-  const [scheduledAt, setScheduledAt] = useState('');
-  const [mediaUrl, setMediaUrl] = useState('');
+export function AddTweetModal({
+  isOpen,
+  onClose,
+  onSubmit,
+}: AddTweetModalProps) {
+  const [content, setContent] = useState("");
+  const [scheduledAt, setScheduledAt] = useState("");
+  const [mediaUrl, setMediaUrl] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   if (!isOpen) return null;
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setIsLoading(true);
 
     try {
       await onSubmit(content, scheduledAt, mediaUrl || undefined);
-      setContent('');
-      setScheduledAt('');
-      setMediaUrl('');
+      setContent("");
+      setScheduledAt("");
+      setMediaUrl("");
       onClose();
     } catch (err: any) {
-      setError(err.message || 'Failed to add tweet');
+      setError(err.message || "Failed to add tweet");
     } finally {
       setIsLoading(false);
     }
@@ -64,7 +72,10 @@ export function AddTweetModal({ isOpen, onClose, onSubmit }: AddTweetModalProps)
           )}
 
           <div>
-            <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="content"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               Tweet Content
             </label>
             <textarea
@@ -84,7 +95,10 @@ export function AddTweetModal({ isOpen, onClose, onSubmit }: AddTweetModalProps)
           </div>
 
           <div>
-            <label htmlFor="scheduledAt" className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="scheduledAt"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               Schedule Time
             </label>
             <input
@@ -100,7 +114,10 @@ export function AddTweetModal({ isOpen, onClose, onSubmit }: AddTweetModalProps)
           </div>
 
           <div>
-            <label htmlFor="mediaUrl" className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="mediaUrl"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               Media URL (optional)
             </label>
             <input
@@ -126,12 +143,36 @@ export function AddTweetModal({ isOpen, onClose, onSubmit }: AddTweetModalProps)
             >
               Cancel
             </button>
+
+            <button
+              type="button"
+              onClick={async () => {
+                setError("");
+                setIsLoading(true);
+                try {
+                  await onSubmit(content, "NOW", mediaUrl || undefined);
+                  setContent("");
+                  setScheduledAt("");
+                  setMediaUrl("");
+                  onClose();
+                } catch (err: any) {
+                  setError(err.message || "Failed to post now");
+                } finally {
+                  setIsLoading(false);
+                }
+              }}
+              disabled={isLoading || !content}
+              className="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? "Posting..." : "Post Now"}
+            </button>
+
             <button
               type="submit"
               disabled={isLoading || !content || !scheduledAt}
               className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? 'Scheduling...' : 'Schedule Tweet'}
+              {isLoading ? "Scheduling..." : "Schedule Tweet"}
             </button>
           </div>
         </form>

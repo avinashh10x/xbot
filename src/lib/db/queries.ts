@@ -126,6 +126,35 @@ export async function createTweet(
   return data;
 }
 
+export async function createPostedTweet(
+  userId: string,
+  content: string,
+  mediaUrl?: string,
+  postedAt?: string
+): Promise<TweetQueue | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("tweet_queue")
+    .insert({
+      user_id: userId,
+      content,
+      scheduled_at: postedAt || new Date().toISOString(),
+      media_url: mediaUrl,
+      status: "posted",
+      posted_at: postedAt || new Date().toISOString(),
+      retry_count: 0,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error creating posted tweet:", error);
+    return null;
+  }
+
+  return data;
+}
+
 export async function updateTweet(
   tweetId: string,
   updates: Partial<

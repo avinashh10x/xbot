@@ -7,7 +7,7 @@ import { TweetQueueTable } from "@/components/TweetQueueTable";
 import { AddTweetModal } from "@/components/AddTweetModal";
 import { PostingController } from "@/components/PostingController";
 import { PostedTweetsList } from "@/components/PostedTweetsList";
-import { createTweet, deleteTweet } from "@/app/actions/tweets";
+import { createTweet, deleteTweet, postNow } from "@/app/actions/tweets";
 import { TweetQueue } from "@/types";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -158,6 +158,25 @@ export function DashboardClient({
     scheduledAt: string,
     mediaUrl?: string
   ) => {
+    // If caller passed the sentinel 'NOW', call server action to post immediately
+    if (scheduledAt === "NOW") {
+      const formData = new FormData();
+      formData.append("content", content);
+      if (mediaUrl) formData.append("media_url", mediaUrl);
+
+      const result = await postNow(formData);
+
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      setNotification({
+        type: "success",
+        message: "Tweet posted successfully!",
+      });
+      return;
+    }
+
     const formData = new FormData();
     formData.append("content", content);
     formData.append("scheduled_at", new Date(scheduledAt).toISOString());
