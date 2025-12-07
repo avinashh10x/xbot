@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { TwitterApi } from "twitter-api-v2";
-import { createClient } from "@/lib/supabase/server";
-import { updateUserTwitterTokens } from "@/lib/db/queries";
 
 export async function GET(request: NextRequest) {
   try {
@@ -73,6 +71,15 @@ export async function GET(request: NextRequest) {
       "   Using redirect URI:",
       process.env.NEXT_PUBLIC_TWITTER_REDIRECT_URI
     );
+    console.log(
+      "   Client ID (first 10 chars):",
+      process.env.TWITTER_CLIENT_ID?.substring(0, 10) + "..."
+    );
+    console.log(
+      "   Client Secret length:",
+      process.env.TWITTER_CLIENT_SECRET?.length,
+      "chars"
+    );
 
     const client = new TwitterApi({
       clientId: process.env.TWITTER_CLIENT_ID!,
@@ -103,39 +110,50 @@ export async function GET(request: NextRequest) {
       twitterUser.id + ")"
     );
 
-    // Get current Supabase user
-    console.log("🔍 Checking Supabase authentication...");
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      console.error("❌ No authenticated Supabase user found");
-      console.error(
-        "   User must be logged into your app first before connecting Twitter"
-      );
-      return NextResponse.redirect(
-        new URL("/dashboard?error=not_authenticated", request.url)
-      );
-    }
-
-    console.log("✅ Supabase user found:", user.email);
+    // Since authentication is disabled, store tokens in cookies
+    console.log("💾 Storing Twitter tokens in cookies...");
 
     // Calculate token expiration
-    const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
+    const expiresAt = new Date(Date.now() + expiresIn * 1000);
 
-    // Save tokens to database
-    console.log("💾 Saving Twitter tokens to database...");
-    await updateUserTwitterTokens(user.id, {
-      access_token: accessToken,
-      refresh_token: refreshToken!,
-      expires_at: expiresAt,
-      twitter_user_id: twitterUser.id,
+    // Store tokens in httpOnly cookies for security
+    cookieStore.set("twitter_access_token", accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      expires: expiresAt,
+      path: "/",
     });
-    console.log("✅ Tokens saved successfully");
 
-    // Clear cookies
+    if (refreshToken) {
+      cookieStore.set("twitter_refresh_token", refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 60 * 60 * 24 * 365, // 1 year
+        path: "/",
+      });
+    }
+
+    cookieStore.set("twitter_user_id", twitterUser.id, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 365, // 1 year
+      path: "/",
+    });
+
+    cookieStore.set("twitter_username", twitterUser.username, {
+      httpOnly: false, // Allow client-side access for display
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 365, // 1 year
+      path: "/",
+    });
+
+    console.log("✅ Tokens saved to cookies");
+
+    // Clear OAuth flow cookies
     cookieStore.delete("twitter_code_verifier");
     cookieStore.delete("twitter_state");
 
