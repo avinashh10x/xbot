@@ -148,12 +148,27 @@ export async function GET(request: NextRequest) {
     console.error("   Error type:", error?.constructor?.name);
     console.error("   Error message:", error?.message);
     console.error("   Error code:", error?.code);
-    console.error("   Error data:", error?.data);
+    console.error("   Error data:", JSON.stringify(error?.data, null, 2));
+    console.error(
+      "   Error response:",
+      JSON.stringify(error?.response?.data, null, 2)
+    );
 
     // Check for specific Twitter API errors
-    if (error?.code === 401) {
+    if (error?.code === 401 || error?.data?.error === "invalid_client") {
       console.error(
-        "   ⚠️  Unauthorized - Check your Twitter Client ID and Secret"
+        "   ⚠️  Invalid Client - Check your Twitter Client ID and Secret"
+      );
+    } else if (
+      error?.code === 400 ||
+      error?.data?.error === "invalid_request"
+    ) {
+      console.error(
+        "   ⚠️  Bad Request - Likely redirect_uri mismatch or invalid code/verifier"
+      );
+      console.error(
+        "   Expected redirect_uri:",
+        process.env.NEXT_PUBLIC_TWITTER_REDIRECT_URI
       );
     } else if (error?.code === 403) {
       console.error(
@@ -165,7 +180,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    console.error("   Full error:", error);
+    console.error("   Full error object:", error);
     console.error("");
 
     return NextResponse.redirect(
