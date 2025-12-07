@@ -1,4 +1,4 @@
-import { Suspense } from 'react';
+import { Suspense } from "react";
 import { DashboardClient } from "./DashboardClient";
 import { TweetQueue } from "@/types";
 

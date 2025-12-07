@@ -104,7 +104,11 @@ export function generateOAuthUrl(state: string, codeChallenge: string) {
     clientSecret: process.env.TWITTER_CLIENT_SECRET!,
   });
 
-  const { url, codeVerifier, state: generatedState } = client.generateOAuth2AuthLink(
+  const {
+    url,
+    codeVerifier,
+    state: generatedState,
+  } = client.generateOAuth2AuthLink(
     process.env.NEXT_PUBLIC_TWITTER_REDIRECT_URI!,
     {
       scope: ["tweet.read", "tweet.write", "users.read", "offline.access"],
