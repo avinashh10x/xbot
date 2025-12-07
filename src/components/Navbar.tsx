@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Settings, Twitter } from 'lucide-react';
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { LayoutDashboard, Settings, Twitter } from "lucide-react";
 
 interface NavbarProps {
   twitterConnected?: boolean;
@@ -12,8 +12,8 @@ export function Navbar({ twitterConnected }: NavbarProps) {
   const pathname = usePathname();
 
   const navLinks = [
-    { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '/settings', label: 'Settings', icon: Settings },
+    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/settings", label: "Settings", icon: Settings },
   ];
 
   return (
@@ -23,7 +23,9 @@ export function Navbar({ twitterConnected }: NavbarProps) {
           <div className="flex items-center gap-8">
             <Link href="/dashboard" className="flex items-center gap-2">
               <Twitter className="w-8 h-8 text-blue-600" />
-              <span className="text-xl font-bold text-gray-900">TweetPilot</span>
+              <span className="text-xl font-bold text-gray-900">
+                TweetPilot
+              </span>
             </Link>
 
             <div className="flex gap-4">
@@ -36,8 +38,8 @@ export function Navbar({ twitterConnected }: NavbarProps) {
                     href={link.href}
                     className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                       isActive
-                        ? 'bg-blue-50 text-blue-600'
-                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                        ? "bg-blue-50 text-blue-600"
+                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                     }`}
                   >
                     <Icon className="w-4 h-4" />

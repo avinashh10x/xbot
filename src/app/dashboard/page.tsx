@@ -1,4 +1,4 @@
-import { DashboardClient } from './DashboardClient';
+import { DashboardClient } from "./DashboardClient";
 
 export default async function DashboardPage() {
   // Authentication is disabled, so we start with empty state
@@ -7,9 +7,9 @@ export default async function DashboardPage() {
   const twitterConnected = false;
 
   return (
-    <DashboardClient 
-      initialTweets={tweets} 
-      twitterConnected={twitterConnected} 
+    <DashboardClient
+      initialTweets={tweets}
+      twitterConnected={twitterConnected}
     />
   );
 }
