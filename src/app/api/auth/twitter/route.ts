@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import {
-  generateCodeVerifier,
-  generateCodeChallenge,
-  generateState,
-} from "@/lib/twitter/pkce";
+import { generateState } from "@/lib/twitter/pkce";
 import { generateOAuthUrl } from "@/lib/twitter/client";
 
 export async function GET(request: NextRequest) {
@@ -39,13 +35,14 @@ export async function GET(request: NextRequest) {
       process.env.NEXT_PUBLIC_TWITTER_REDIRECT_URI
     );
 
-    const codeVerifier = generateCodeVerifier();
-    const codeChallenge = generateCodeChallenge(codeVerifier);
     const state = generateState();
 
-    console.log("🔑 Generated OAuth parameters");
-    console.log("   - State:", state.substring(0, 10) + "...");
-    console.log("   - Code Challenge:", codeChallenge.substring(0, 10) + "...");
+    console.log("🔑 Generated state:", state.substring(0, 10) + "...");
+
+    // Generate OAuth URL and get codeVerifier from the library
+    const { url, codeVerifier, state: returnedState } = generateOAuthUrl(state);
+
+    console.log("🔑 Code verifier received from library");
 
     // Store code verifier and state in cookies
     const cookieStore = await cookies();
@@ -65,10 +62,8 @@ export async function GET(request: NextRequest) {
       path: "/",
     });
 
-    const authUrl = generateOAuthUrl(state, codeChallenge);
-
-    console.log("🔗 Redirecting to Twitter OAuth URL:", authUrl.url);
-    return NextResponse.redirect(authUrl.url);
+    console.log("🔗 Redirecting to Twitter OAuth URL");
+    return NextResponse.redirect(url);
   } catch (error: any) {
     console.error("❌ Error initiating Twitter OAuth:");
     console.error("   Error type:", error?.constructor?.name);

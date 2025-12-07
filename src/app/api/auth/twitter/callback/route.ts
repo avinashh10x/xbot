@@ -79,15 +79,6 @@ export async function GET(request: NextRequest) {
       clientSecret: process.env.TWITTER_CLIENT_SECRET!,
     });
 
-    console.log(
-      "   DEBUG: Client ID used:",
-      process.env.TWITTER_CLIENT_ID?.substring(0, 10) + "..."
-    );
-    console.log(
-      "   DEBUG: Redirect URI used:",
-      process.env.NEXT_PUBLIC_TWITTER_REDIRECT_URI
-    );
-
     const {
       client: loggedClient,
       accessToken,

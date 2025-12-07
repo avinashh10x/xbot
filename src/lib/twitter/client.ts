@@ -90,7 +90,7 @@ export async function postTweet(
   }
 }
 
-export function generateOAuthUrl(state: string, codeChallenge: string) {
+export function generateOAuthUrl(state: string) {
   console.log("📋 Generating OAuth URL with configuration:");
   console.log(
     "   Client ID:",
@@ -104,6 +104,7 @@ export function generateOAuthUrl(state: string, codeChallenge: string) {
     clientSecret: process.env.TWITTER_CLIENT_SECRET!,
   });
 
+  // generateOAuth2AuthLink creates codeVerifier internally
   const {
     url,
     codeVerifier,
@@ -114,6 +115,11 @@ export function generateOAuthUrl(state: string, codeChallenge: string) {
       scope: ["tweet.read", "tweet.write", "users.read", "offline.access"],
       state,
     }
+  );
+
+  console.log(
+    "   Code verifier generated:",
+    codeVerifier.substring(0, 10) + "..."
   );
 
   // Return the generated URL, codeVerifier, and state
