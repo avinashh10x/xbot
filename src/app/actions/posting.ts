@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getCurrentUser } from "./auth";
+import { cookies } from "next/headers";
 import {
   getPostingSettings,
   createOrUpdatePostingSettings,
@@ -9,12 +9,14 @@ import {
 
 export async function fetchPostingSettings() {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return { error: "Unauthorized" };
+    const cookieStore = await cookies();
+    const twitterUserId = cookieStore.get("twitter_user_id")?.value;
+
+    if (!twitterUserId) {
+      return { error: "Twitter not connected" };
     }
 
-    const settings = await getPostingSettings(user.id);
+    const settings = await getPostingSettings(twitterUserId);
 
     // Return default settings if none exist
     if (!settings) {
@@ -40,9 +42,11 @@ export async function fetchPostingSettings() {
 
 export async function updatePostingSettings(formData: FormData) {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return { error: "Unauthorized" };
+    const cookieStore = await cookies();
+    const twitterUserId = cookieStore.get("twitter_user_id")?.value;
+
+    if (!twitterUserId) {
+      return { error: "Twitter not connected" };
     }
 
     const autoPostEnabled = formData.get("auto_post_enabled") === "true";
@@ -65,7 +69,7 @@ export async function updatePostingSettings(formData: FormData) {
       return { error: "Max posts per day must be between 1 and 50" };
     }
 
-    const settings = await createOrUpdatePostingSettings(user.id, {
+    const settings = await createOrUpdatePostingSettings(twitterUserId, {
       auto_post_enabled: autoPostEnabled,
       post_interval_minutes: postIntervalMinutes,
       max_posts_per_day: maxPostsPerDay,
