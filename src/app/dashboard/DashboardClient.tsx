@@ -8,16 +8,20 @@ import { AddTweetModal } from "@/components/AddTweetModal";
 import { createTweet, deleteTweet } from "@/app/actions/tweets";
 import { TweetQueue } from "@/types";
 import { createClient } from "@/lib/supabase/client";
-import { Plus, AlertCircle, CheckCircle } from "lucide-react";
+import { Plus, AlertCircle, CheckCircle, Twitter, User, Hash, Calendar } from "lucide-react";
 
 interface DashboardClientProps {
   initialTweets: TweetQueue[];
   twitterConnected: boolean;
+  twitterUsername?: string;
+  twitterUserId?: string;
 }
 
 export function DashboardClient({
   initialTweets,
   twitterConnected,
+  twitterUsername,
+  twitterUserId,
 }: DashboardClientProps) {
   const [tweets, setTweets] = useState<TweetQueue[]>(initialTweets);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -217,6 +221,76 @@ export function DashboardClient({
                 >
                   Connect Twitter →
                 </a>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Twitter Account Info */}
+        {twitterConnected && twitterUsername && (
+          <div className="mb-6 bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+            <div className="flex items-start justify-between">
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-blue-100 rounded-full">
+                  <Twitter className="w-6 h-6 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                    Connected Twitter Account
+                  </h3>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-gray-700">
+                      <User className="w-4 h-4 text-gray-500" />
+                      <span className="font-medium">@{twitterUsername}</span>
+                    </div>
+                    {twitterUserId && (
+                      <div className="flex items-center gap-2 text-gray-600 text-sm">
+                        <Hash className="w-4 h-4 text-gray-400" />
+                        <span className="font-mono">{twitterUserId}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 text-gray-600 text-sm">
+                      <Calendar className="w-4 h-4 text-gray-400" />
+                      <span>Connected today</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  Active
+                </span>
+              </div>
+            </div>
+            
+            {/* Stats */}
+            <div className="mt-6 pt-6 border-t border-gray-200">
+              <div className="grid grid-cols-3 gap-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-gray-900">
+                    {tweets.length}
+                  </div>
+                  <div className="text-sm text-gray-600 mt-1">
+                    Scheduled Tweets
+                  </div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-gray-900">
+                    {tweets.filter(t => t.status === 'posted').length}
+                  </div>
+                  <div className="text-sm text-gray-600 mt-1">
+                    Posted
+                  </div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-gray-900">
+                    {tweets.filter(t => t.status === 'pending').length}
+                  </div>
+                  <div className="text-sm text-gray-600 mt-1">
+                    Pending
+                  </div>
+                </div>
               </div>
             </div>
           </div>
