@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { TwitterApi } from "twitter-api-v2";
+import { createAdminClient } from "@/lib/supabase/server";
 
 export async function GET(request: NextRequest) {
   try {
@@ -152,6 +153,43 @@ export async function GET(request: NextRequest) {
     });
 
     console.log("✅ Tokens saved to cookies");
+
+    // Save/update user in database for cron job access
+    try {
+      const supabase = await createAdminClient();
+      const { data: existingUser } = await supabase
+        .from("users")
+        .select("id")
+        .eq("twitter_user_id", twitterUser.id)
+        .single();
+
+      if (existingUser) {
+        // Update existing user
+        await supabase
+          .from("users")
+          .update({
+            twitter_access_token: accessToken,
+            twitter_refresh_token: refreshToken,
+            token_expires_at: expiresAt.toISOString(),
+          })
+          .eq("id", existingUser.id);
+        console.log("✅ Updated existing user in database");
+      } else {
+        // Create new user
+        await supabase.from("users").insert({
+          id: crypto.randomUUID(),
+          email: `${twitterUser.username}@twitter.local`,
+          twitter_user_id: twitterUser.id,
+          twitter_access_token: accessToken,
+          twitter_refresh_token: refreshToken,
+          token_expires_at: expiresAt.toISOString(),
+        });
+        console.log("✅ Created new user in database");
+      }
+    } catch (dbError) {
+      console.error("⚠️ Failed to save to database:", dbError);
+      // Continue anyway - cookies will work for immediate actions
+    }
 
     // Clear OAuth flow cookies
     cookieStore.delete("twitter_code_verifier");

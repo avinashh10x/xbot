@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { LayoutDashboard, Settings, Twitter } from "lucide-react";
 
 interface NavbarProps {
@@ -10,6 +10,7 @@ interface NavbarProps {
 
 export function Navbar({ twitterConnected }: NavbarProps) {
   const pathname = usePathname();
+  const router = useRouter();
 
   const navLinks = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -52,10 +53,29 @@ export function Navbar({ twitterConnected }: NavbarProps) {
 
           <div className="flex items-center gap-4">
             {twitterConnected ? (
-              <span className="flex items-center gap-2 text-sm text-green-600 font-medium">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                Twitter Connected
-              </span>
+              <>
+                <span className="flex items-center gap-2 text-sm text-green-600 font-medium">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  Twitter Connected
+                </span>
+                <button
+                  onClick={async () => {
+                    try {
+                      const res = await fetch("/api/auth/logout", { method: "POST" });
+                      if (res.ok) {
+                        router.push("/dashboard");
+                      } else {
+                        console.error("Logout failed", await res.text());
+                      }
+                    } catch (err) {
+                      console.error("Logout error", err);
+                    }
+                  }}
+                  className="px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
+                >
+                  Logout
+                </button>
+              </>
             ) : (
               <Link
                 href="/api/auth/twitter"

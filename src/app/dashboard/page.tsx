@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { cookies } from "next/headers";
 import { DashboardClient } from "./DashboardClient";
 import { TweetQueue } from "@/types";
-import { getTweetQueue } from "@/lib/db/queries";
+import { getTweetQueue, getUserByTwitterId } from "@/lib/db/queries";
 
 export default async function DashboardPage() {
   // Check if Twitter is connected via cookies
@@ -15,7 +15,11 @@ export default async function DashboardPage() {
   // Load tweets if Twitter is connected
   let tweets: TweetQueue[] = [];
   if (twitterUserId) {
-    tweets = await getTweetQueue(twitterUserId);
+    // Get the actual user UUID from database
+    const user = await getUserByTwitterId(twitterUserId);
+    if (user) {
+      tweets = await getTweetQueue(user.id);
+    }
   }
 
   return (

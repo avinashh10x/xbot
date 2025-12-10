@@ -2,14 +2,14 @@
 
 import { cookies } from "next/headers";
 import { getUserTweets } from "@/lib/twitter/client";
-import { getTweetQueue } from "@/lib/db/queries";
+import { getTweetQueue, getUserByTwitterId } from "@/lib/db/queries";
 
 export async function fetchUserTweets() {
-  try {
-    const cookieStore = await cookies();
-    const twitterAccessToken = cookieStore.get("twitter_access_token")?.value;
-    const twitterUserId = cookieStore.get("twitter_user_id")?.value;
+  const cookieStore = await cookies();
+  const twitterAccessToken = cookieStore.get("twitter_access_token")?.value;
+  const twitterUserId = cookieStore.get("twitter_user_id")?.value;
 
+  try {
     if (!twitterAccessToken || !twitterUserId) {
       return { error: "Twitter not connected" };
     }
@@ -26,7 +26,16 @@ export async function fetchUserTweets() {
         "Rate limited fetching user tweets — falling back to DB records"
       );
       try {
-        const queue = await getTweetQueue(twitterUserId);
+        const localUser = await getUserByTwitterId(twitterUserId!);
+        if (!localUser) {
+          console.error(
+            "[fetchUserTweets] no local user found for twitter_user_id:",
+            twitterUserId
+          );
+          return { success: true, tweets: [] };
+        }
+
+        const queue = await getTweetQueue(localUser.id);
         const posted = (queue || []).filter((t) => t.status === "posted");
 
         const mapped = posted.map((t) => ({

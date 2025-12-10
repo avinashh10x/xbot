@@ -38,6 +38,7 @@ export function AddTweetModal({
       setMediaUrl("");
       onClose();
     } catch (err: any) {
+      console.error("[AddTweetModal] error scheduling tweet:", err);
       setError(err.message || "Failed to add tweet");
     } finally {
       setIsLoading(false);
@@ -156,6 +157,7 @@ export function AddTweetModal({
                   setMediaUrl("");
                   onClose();
                 } catch (err: any) {
+                  console.error("[AddTweetModal] error posting now:", err);
                   setError(err.message || "Failed to post now");
                 } finally {
                   setIsLoading(false);

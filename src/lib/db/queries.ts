@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import {
   User,
   TweetQueue,
@@ -23,11 +23,29 @@ export async function getUserProfile(userId: string): Promise<User | null> {
   return data;
 }
 
+export async function getUserByTwitterId(
+  twitterUserId: string
+): Promise<User | null> {
+  const supabase = await createAdminClient();
+  const { data, error } = await supabase
+    .from("users")
+    .select("*")
+    .eq("twitter_user_id", twitterUserId)
+    .single();
+
+  if (error) {
+    console.error("Error fetching user by twitter id:", error);
+    return null;
+  }
+
+  return data;
+}
+
 export async function updateUserTwitterTokens(
   userId: string,
   tokens: TwitterTokens & { twitter_user_id?: string }
 ): Promise<boolean> {
-  const supabase = await createClient();
+  const supabase = await createAdminClient();
   const { error } = await supabase
     .from("users")
     .update({
@@ -47,7 +65,7 @@ export async function updateUserTwitterTokens(
 }
 
 export async function getUserPrefs(userId: string): Promise<UserPrefs | null> {
-  const supabase = await createClient();
+  const supabase = await createAdminClient();
   const { data, error } = await supabase
     .from("user_prefs")
     .select("*")
@@ -55,11 +73,57 @@ export async function getUserPrefs(userId: string): Promise<UserPrefs | null> {
     .single();
 
   if (error) {
-    console.error("Error fetching user prefs:", error);
+    // Not found is OK - user might not have prefs yet
+    if (error.code !== "PGRST116") {
+      console.error("Error fetching user prefs:", error);
+    }
     return null;
   }
 
   return data;
+}
+
+export async function createOrUpdateUserPrefs(
+  userId: string,
+  prefs: Partial<
+    Omit<UserPrefs, "id" | "user_id" | "created_at" | "updated_at">
+  >
+): Promise<UserPrefs | null> {
+  const supabase = await createAdminClient();
+
+  // Try to update first
+  const { data: existing } = await supabase
+    .from("user_prefs")
+    .select("id")
+    .eq("user_id", userId)
+    .single();
+
+  if (existing) {
+    const { data, error } = await supabase
+      .from("user_prefs")
+      .update(prefs)
+      .eq("user_id", userId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error updating user prefs:", error);
+      return null;
+    }
+    return data;
+  } else {
+    const { data, error } = await supabase
+      .from("user_prefs")
+      .insert({ user_id: userId, ...prefs })
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error creating user prefs:", error);
+      return null;
+    }
+    return data;
+  }
 }
 
 export async function updateUserPrefs(
@@ -68,7 +132,7 @@ export async function updateUserPrefs(
     Omit<UserPrefs, "id" | "user_id" | "created_at" | "updated_at">
   >
 ): Promise<boolean> {
-  const supabase = await createClient();
+  const supabase = await createAdminClient();
   const { error } = await supabase
     .from("user_prefs")
     .update(prefs)
@@ -83,7 +147,9 @@ export async function updateUserPrefs(
 }
 
 export async function getTweetQueue(userId: string): Promise<TweetQueue[]> {
-  const supabase = await createClient();
+  // Use admin client for server-side lookups to avoid Row Level Security when
+  // the request is not authenticated via Supabase auth cookie.
+  const supabase = await createAdminClient();
   const { data, error } = await supabase
     .from("tweet_queue")
     .select("*")
@@ -104,7 +170,9 @@ export async function createTweet(
   scheduledAt: string,
   mediaUrl?: string
 ): Promise<TweetQueue | null> {
-  const supabase = await createClient();
+  // Use admin client for server-side inserts (cron/actions) to bypass RLS
+  // when requests are not authenticated with Supabase auth.
+  const supabase = await createAdminClient();
   const { data, error } = await supabase
     .from("tweet_queue")
     .insert({
@@ -120,7 +188,7 @@ export async function createTweet(
 
   if (error) {
     console.error("Error creating tweet:", error);
-    return null;
+    throw new Error(error.message || "Failed to insert tweet into DB");
   }
 
   return data;
@@ -132,7 +200,7 @@ export async function createPostedTweet(
   mediaUrl?: string,
   postedAt?: string
 ): Promise<TweetQueue | null> {
-  const supabase = await createClient();
+  const supabase = await createAdminClient();
   const { data, error } = await supabase
     .from("tweet_queue")
     .insert({
@@ -149,7 +217,7 @@ export async function createPostedTweet(
 
   if (error) {
     console.error("Error creating posted tweet:", error);
-    return null;
+    throw new Error(error.message || "Failed to insert posted tweet into DB");
   }
 
   return data;
@@ -193,7 +261,7 @@ export async function deleteTweet(tweetId: string): Promise<boolean> {
 export async function getPendingTweets(): Promise<
   Array<TweetQueue & { user: User }>
 > {
-  const supabase = await createClient();
+  const supabase = await createAdminClient();
   const { data, error } = await supabase
     .from("tweet_queue")
     .select(
@@ -240,7 +308,7 @@ export async function markTweetAsFailed(
 export async function getPostingSettings(
   userId: string
 ): Promise<PostingSettings | null> {
-  const supabase = await createClient();
+  const supabase = await createAdminClient();
   const { data, error } = await supabase
     .from("posting_settings")
     .select("*")
@@ -261,7 +329,7 @@ export async function createOrUpdatePostingSettings(
     Omit<PostingSettings, "id" | "user_id" | "created_at" | "updated_at">
   >
 ): Promise<PostingSettings | null> {
-  const supabase = await createClient();
+  const supabase = await createAdminClient();
 
   // Try to update first
   const { data: existingData } = await supabase
@@ -301,7 +369,7 @@ export async function createOrUpdatePostingSettings(
 }
 
 export async function incrementPostsToday(userId: string): Promise<boolean> {
-  const supabase = await createClient();
+  const supabase = await createAdminClient();
   const { error } = await supabase.rpc("increment_posts_today", {
     p_user_id: userId,
   });
@@ -312,4 +380,53 @@ export async function incrementPostsToday(userId: string): Promise<boolean> {
   }
 
   return true;
+}
+
+/**
+ * Get the next available scheduled time for a user
+ * Takes into account existing pending tweets to avoid double-booking
+ */
+export async function getNextScheduledTime(
+  userId: string,
+  dailyPostTime: string = "20:00"
+): Promise<Date> {
+  const supabase = await createAdminClient();
+
+  // Get the latest scheduled pending tweet for this user
+  const { data: lastTweet } = await supabase
+    .from("tweet_queue")
+    .select("scheduled_at")
+    .eq("user_id", userId)
+    .eq("status", "pending")
+    .order("scheduled_at", { ascending: false })
+    .limit(1)
+    .single();
+
+  const [hours, minutes] = dailyPostTime.split(":").map(Number);
+  const now = new Date();
+
+  // Start with today at the preferred time
+  let nextDate = new Date();
+  nextDate.setHours(hours, minutes, 0, 0);
+
+  // If today's time has passed, start from tomorrow
+  if (nextDate <= now) {
+    nextDate.setDate(nextDate.getDate() + 1);
+  }
+
+  // If there's a last scheduled tweet, schedule after that
+  if (lastTweet) {
+    const lastScheduled = new Date(lastTweet.scheduled_at);
+    // Set to the day after the last scheduled tweet
+    const dayAfterLast = new Date(lastScheduled);
+    dayAfterLast.setDate(dayAfterLast.getDate() + 1);
+    dayAfterLast.setHours(hours, minutes, 0, 0);
+
+    // Use whichever is later
+    if (dayAfterLast > nextDate) {
+      nextDate = dayAfterLast;
+    }
+  }
+
+  return nextDate;
 }

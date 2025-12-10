@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import {
   getPostingSettings,
   createOrUpdatePostingSettings,
+  getUserByTwitterId,
 } from "@/lib/db/queries";
 
 export async function fetchPostingSettings() {
@@ -16,7 +17,13 @@ export async function fetchPostingSettings() {
       return { error: "Twitter not connected" };
     }
 
-    const settings = await getPostingSettings(twitterUserId);
+    // Get actual user UUID
+    const user = await getUserByTwitterId(twitterUserId);
+    if (!user) {
+      return { error: "User not found" };
+    }
+
+    const settings = await getPostingSettings(user.id);
 
     // Return default settings if none exist
     if (!settings) {
@@ -49,6 +56,12 @@ export async function updatePostingSettings(formData: FormData) {
       return { error: "Twitter not connected" };
     }
 
+    // Get actual user UUID
+    const user = await getUserByTwitterId(twitterUserId);
+    if (!user) {
+      return { error: "User not found" };
+    }
+
     const autoPostEnabled = formData.get("auto_post_enabled") === "true";
     const postIntervalMinutes = parseInt(
       formData.get("post_interval_minutes") as string
@@ -69,7 +82,7 @@ export async function updatePostingSettings(formData: FormData) {
       return { error: "Max posts per day must be between 1 and 50" };
     }
 
-    const settings = await createOrUpdatePostingSettings(twitterUserId, {
+    const settings = await createOrUpdatePostingSettings(user.id, {
       auto_post_enabled: autoPostEnabled,
       post_interval_minutes: postIntervalMinutes,
       max_posts_per_day: maxPostsPerDay,
