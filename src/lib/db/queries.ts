@@ -34,7 +34,10 @@ export async function getUserByTwitterId(
     .single();
 
   if (error) {
-    console.error("Error fetching user by twitter id:", error);
+    // PGRST116 = "The result contains 0 rows" - not an error, just user doesn't exist
+    if (error.code !== "PGRST116") {
+      console.error("Error fetching user by twitter id:", error);
+    }
     return null;
   }
 

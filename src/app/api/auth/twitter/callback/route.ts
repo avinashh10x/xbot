@@ -3,9 +3,22 @@ import { cookies } from "next/headers";
 import { TwitterApi } from "twitter-api-v2";
 import { createAdminClient } from "@/lib/supabase/server";
 
+// Helper to get base URL (handles dev tunnels properly)
+function getBaseUrl(): string {
+  // Use explicit app URL if set (required for dev tunnels)
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    return process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, ""); // Remove trailing slash
+  }
+  // Fallback for local development
+  return "http://localhost:3000";
+}
+
 export async function GET(request: NextRequest) {
+  const baseUrl = getBaseUrl();
+
   try {
     console.log("\n🔄 Twitter OAuth callback received");
+    console.log("   Base URL for redirects:", baseUrl);
 
     const searchParams = request.nextUrl.searchParams;
     const code = searchParams.get("code");
@@ -21,7 +34,7 @@ export async function GET(request: NextRequest) {
         new URL(
           "/dashboard?error=twitter_oauth_error&details=" +
             encodeURIComponent(errorDescription || error),
-          request.url
+          baseUrl
         )
       );
     }
@@ -31,7 +44,7 @@ export async function GET(request: NextRequest) {
       console.error("   Code present:", !!code);
       console.error("   State present:", !!state);
       return NextResponse.redirect(
-        new URL("/dashboard?error=missing_parameters", request.url)
+        new URL("/dashboard?error=missing_parameters", baseUrl)
       );
     }
 
@@ -53,14 +66,14 @@ export async function GET(request: NextRequest) {
         "   This might mean cookies are not working or OAuth flow expired"
       );
       return NextResponse.redirect(
-        new URL("/dashboard?error=missing_stored_params", request.url)
+        new URL("/dashboard?error=missing_stored_params", baseUrl)
       );
     }
 
     if (storedState !== state) {
       console.error("❌ State mismatch - possible CSRF attack");
       return NextResponse.redirect(
-        new URL("/dashboard?error=invalid_state", request.url)
+        new URL("/dashboard?error=invalid_state", baseUrl)
       );
     }
 
@@ -175,16 +188,21 @@ export async function GET(request: NextRequest) {
           .eq("id", existingUser.id);
         console.log("✅ Updated existing user in database");
       } else {
-        // Create new user
-        await supabase.from("users").insert({
-          id: crypto.randomUUID(),
-          email: `${twitterUser.username}@twitter.local`,
+        // Create new user - explicitly set UUID
+        const newUserId = crypto.randomUUID();
+        const { error: insertError } = await supabase.from("users").insert({
+          id: newUserId,
           twitter_user_id: twitterUser.id,
           twitter_access_token: accessToken,
           twitter_refresh_token: refreshToken,
           token_expires_at: expiresAt.toISOString(),
         });
-        console.log("✅ Created new user in database");
+
+        if (insertError) {
+          console.error("⚠️ Failed to insert user:", insertError);
+        } else {
+          console.log("✅ Created new user in database with ID:", newUserId);
+        }
       }
     } catch (dbError) {
       console.error("⚠️ Failed to save to database:", dbError);
@@ -197,7 +215,7 @@ export async function GET(request: NextRequest) {
 
     console.log("🎉 Twitter connection successful!\n");
     return NextResponse.redirect(
-      new URL("/dashboard?twitter_connected=true", request.url)
+      new URL("/dashboard?twitter_connected=true", baseUrl)
     );
   } catch (error: any) {
     console.error("\n❌ Error handling Twitter OAuth callback:");
@@ -243,7 +261,7 @@ export async function GET(request: NextRequest) {
       new URL(
         "/dashboard?error=oauth_callback_failed&details=" +
           encodeURIComponent(error?.message || "Unknown error"),
-        request.url
+        baseUrl
       )
     );
   }

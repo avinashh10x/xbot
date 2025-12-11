@@ -25,7 +25,7 @@ export function Navbar({ twitterConnected }: NavbarProps) {
             <Link href="/dashboard" className="flex items-center gap-2">
               <Twitter className="w-8 h-8 text-blue-600" />
               <span className="text-xl font-bold text-gray-900">
-                TweetPilot
+                TweetPilott
               </span>
             </Link>
 
