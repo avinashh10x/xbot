@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { TwitterApi } from "twitter-api-v2";
-import { createAdminClient } from "@/lib/supabase/server";
+import { connectDB } from "@/lib/mongodb/client";
+import { User } from "@/lib/mongodb/models";
 
 // Helper to get base URL (handles dev tunnels properly)
 function getBaseUrl(): string {
@@ -167,45 +168,37 @@ export async function GET(request: NextRequest) {
 
     console.log("✅ Tokens saved to cookies");
 
-    // Save/update user in database for cron job access
+    // Save/update user in MongoDB
     try {
-      const supabase = await createAdminClient();
-      const { data: existingUser } = await supabase
-        .from("users")
-        .select("id")
-        .eq("twitter_user_id", twitterUser.id)
-        .single();
+      await connectDB();
+
+      const existingUser = await User.findOne({
+        twitterUserId: twitterUser.id,
+      });
 
       if (existingUser) {
         // Update existing user
-        await supabase
-          .from("users")
-          .update({
-            twitter_access_token: accessToken,
-            twitter_refresh_token: refreshToken,
-            token_expires_at: expiresAt.toISOString(),
-          })
-          .eq("id", existingUser.id);
-        console.log("✅ Updated existing user in database");
+        existingUser.twitterAccessToken = accessToken;
+        if (refreshToken) existingUser.twitterRefreshToken = refreshToken;
+        existingUser.tokenExpiresAt = expiresAt;
+        await existingUser.save();
+        console.log("✅ Updated existing user in MongoDB");
       } else {
-        // Create new user - explicitly set UUID
-        const newUserId = crypto.randomUUID();
-        const { error: insertError } = await supabase.from("users").insert({
-          id: newUserId,
-          twitter_user_id: twitterUser.id,
-          twitter_access_token: accessToken,
-          twitter_refresh_token: refreshToken,
-          token_expires_at: expiresAt.toISOString(),
+        // Create new user
+        const newUser = new User({
+          email: `${twitterUser.username}@twitter.local`,
+          twitterUserId: twitterUser.id,
+          twitterUsername: twitterUser.username,
+          twitterAccessToken: accessToken,
+          twitterRefreshToken: refreshToken,
+          tokenExpiresAt: expiresAt,
         });
 
-        if (insertError) {
-          console.error("⚠️ Failed to insert user:", insertError);
-        } else {
-          console.log("✅ Created new user in database with ID:", newUserId);
-        }
+        await newUser.save();
+        console.log("✅ Created new user in MongoDB");
       }
     } catch (dbError) {
-      console.error("⚠️ Failed to save to database:", dbError);
+      console.error("⚠️ Failed to save to MongoDB:", dbError);
       // Continue anyway - cookies will work for immediate actions
     }
 

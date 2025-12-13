@@ -2,8 +2,9 @@
 
 import { cookies } from "next/headers";
 import { TwitterApi } from "twitter-api-v2";
-import { createAdminClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { connectDB } from "@/lib/mongodb/client";
+import { User, TweetQueue } from "@/lib/mongodb/models";
 
 // Types for Twitter data
 export interface TwitterProfile {
@@ -271,71 +272,41 @@ export async function schedulePost(content: string, scheduledAt: string) {
       return { error: "Tweet exceeds 280 characters" };
     }
 
-    // Get or create user in DB
-    const supabase = await createAdminClient();
-
-    let { data: user } = await supabase
-      .from("users")
-      .select("id")
-      .eq("twitter_user_id", twitterUserId)
-      .single();
+    // Get user from MongoDB
+    await connectDB();
+    const user = await User.findOne({ twitterUserId });
 
     if (!user) {
-      // User should have been created on OAuth callback
-      // But create if missing for robustness
-      const accessToken = cookieStore.get("twitter_access_token")?.value;
-      const refreshToken = cookieStore.get("twitter_refresh_token")?.value;
-
-      // Create user with explicit UUID
-      const newUserId = crypto.randomUUID();
-      const { data: newUser, error: createError } = await supabase
-        .from("users")
-        .insert({
-          id: newUserId,
-          twitter_user_id: twitterUserId,
-          twitter_access_token: accessToken,
-          twitter_refresh_token: refreshToken,
-        })
-        .select("id")
-        .single();
-
-      if (createError) {
-        console.error("Failed to create user:", createError);
-        return { error: "Failed to create user record" };
-      }
-
-      user = newUser;
+      console.error("User not found for twitter_user_id:", twitterUserId);
+      return {
+        error: "User not found. Please reconnect your Twitter account.",
+      };
     }
 
     // Add to tweet queue
-    const { data: tweet, error: insertError } = await supabase
-      .from("tweet_queue")
-      .insert({
-        user_id: user.id,
-        content: content.trim(),
-        scheduled_at: scheduledAt,
-        status: "pending",
-      })
-      .select()
-      .single();
+    const tweet = new TweetQueue({
+      userId: user._id,
+      content: content.trim(),
+      scheduledAt,
+      status: "pending",
+    });
 
-    if (insertError) {
-      console.error("Failed to schedule tweet:", insertError);
-      return { error: "Failed to schedule tweet" };
-    }
+    await tweet.save();
 
     console.log("✅ Tweet scheduled for:", scheduledAt);
 
     revalidatePath("/dashboard");
 
+    console.log("✅ Tweet scheduled for:", scheduledAt);
+
     return {
       success: true,
       tweet: {
-        id: tweet.id,
+        id: tweet._id.toString(),
         content: tweet.content,
-        scheduled_at: tweet.scheduled_at,
+        scheduled_at: tweet.scheduledAt,
         status: tweet.status,
-        created_at: tweet.created_at,
+        created_at: tweet.createdAt,
       },
     };
   } catch (error: any) {
@@ -356,30 +327,27 @@ export async function getScheduledTweets() {
       return { error: "Twitter not connected" };
     }
 
-    const supabase = await createAdminClient();
-
-    const { data: user } = await supabase
-      .from("users")
-      .select("id")
-      .eq("twitter_user_id", twitterUserId)
-      .single();
+    await connectDB();
+    const user = await User.findOne({ twitterUserId });
 
     if (!user) {
       return { tweets: [] };
     }
 
-    const { data: tweets, error } = await supabase
-      .from("tweet_queue")
-      .select("id, content, scheduled_at, status, posted_at, created_at")
-      .eq("user_id", user.id)
-      .order("scheduled_at", { ascending: true });
+    const tweets = await TweetQueue.find({ userId: user._id }).sort({
+      scheduledAt: 1,
+    });
 
-    if (error) {
-      console.error("Failed to fetch tweets:", error);
-      return { error: "Failed to fetch tweets" };
-    }
-
-    return { tweets: tweets || [] };
+    return {
+      tweets: tweets.map((t) => ({
+        id: t._id.toString(),
+        content: t.content,
+        scheduled_at: t.scheduledAt,
+        status: t.status,
+        posted_at: t.postedAt,
+        created_at: t.createdAt,
+      })),
+    };
   } catch (error: any) {
     console.error("❌ Failed to fetch tweets:", error);
     return { error: error?.message || "Failed to fetch tweets" };
@@ -398,17 +366,8 @@ export async function deleteScheduledTweet(tweetId: string) {
       return { error: "Twitter not connected" };
     }
 
-    const supabase = await createAdminClient();
-
-    const { error } = await supabase
-      .from("tweet_queue")
-      .delete()
-      .eq("id", tweetId);
-
-    if (error) {
-      console.error("Failed to delete tweet:", error);
-      return { error: "Failed to delete tweet" };
-    }
+    await connectDB();
+    await TweetQueue.findByIdAndDelete(tweetId);
 
     revalidatePath("/dashboard");
 
@@ -431,34 +390,31 @@ export async function getPostedTweets() {
       return { error: "Twitter not connected" };
     }
 
-    const supabase = await createAdminClient();
-
-    const { data: user } = await supabase
-      .from("users")
-      .select("id")
-      .eq("twitter_user_id", twitterUserId)
-      .single();
+    await connectDB();
+    const user = await User.findOne({ twitterUserId });
 
     if (!user) {
       return { tweets: [] };
     }
 
-    const { data: tweets, error } = await supabase
-      .from("tweet_queue")
-      .select(
-        "id, content, scheduled_at, status, posted_at, twitter_tweet_id, created_at"
-      )
-      .eq("user_id", user.id)
-      .eq("status", "posted")
-      .order("posted_at", { ascending: false })
+    const tweets = await TweetQueue.find({
+      userId: user._id,
+      status: "posted",
+    })
+      .sort({ postedAt: -1 })
       .limit(10);
 
-    if (error) {
-      console.error("Failed to fetch posted tweets:", error);
-      return { error: "Failed to fetch posted tweets" };
-    }
-
-    return { tweets: tweets || [] };
+    return {
+      tweets: tweets.map((t) => ({
+        id: t._id.toString(),
+        content: t.content,
+        scheduled_at: t.scheduledAt,
+        status: t.status,
+        posted_at: t.postedAt,
+        twitter_tweet_id: t.twitterTweetId,
+        created_at: t.createdAt,
+      })),
+    };
   } catch (error: any) {
     console.error("❌ Failed to fetch posted tweets:", error);
     return { error: error?.message || "Failed to fetch posted tweets" };
