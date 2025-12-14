@@ -13,6 +13,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
+    // suppressHydrationWarning is required for next-themes to avoid hydration mismatch
+    // when the theme is applied on the client side
     <html lang="en" suppressHydrationWarning>
       <body className="antialiased">
         <ThemeProvider
