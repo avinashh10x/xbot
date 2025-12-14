@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   Menu,
 } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function DashboardLayout({
   children,
@@ -48,6 +49,7 @@ export default function DashboardLayout({
             >
               Settings
             </Link>
+            <ThemeToggle />
           </nav>
         </div>
       </header>
