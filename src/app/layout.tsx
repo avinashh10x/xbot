@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "TweetPilot - Smart Twitter Scheduling",
-  description: "Schedule and automate your Twitter posts with ease",
+  title: "XBot - AI Social Media Manager",
+  description: "Automate your social media posts with AI-powered scheduling",
 };
 
 export default function RootLayout({
@@ -12,10 +12,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className="antialiased bg-gray-50">
-        {children}
-      </body>
+    <html lang="en" suppressHydrationWarning>
+      <body className="antialiased">{children}</body>
     </html>
   );
 }
