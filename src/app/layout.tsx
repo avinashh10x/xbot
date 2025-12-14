@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { ThemeProvider } from "@/context/theme-provider";
 
 export const metadata: Metadata = {
-  title: "TweetPilot - Smart Twitter Scheduling",
-  description: "Schedule and automate your Twitter posts with ease",
+  title: "XBot - AI Social Media Manager",
+  description: "Automate your social media posts with AI-powered scheduling",
 };
 
 export default function RootLayout({
@@ -12,9 +13,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className="antialiased bg-gray-50">
-        {children}
+    // suppressHydrationWarning is required for next-themes to avoid hydration mismatch
+    // when the theme is applied on the client side
+    <html lang="en" suppressHydrationWarning>
+      <body className="antialiased">
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );
